@@ -165,7 +165,7 @@ local function ConfigurationWindow(configuration)
         if imgui.TreeNodeEx("TranslatorChatLog", "DefaultOpen") then
 
             imgui.PushItemWidth(300)
-            success, _configuration.chatDisplayMode = imgui.Combo("select the chat to display.", _configuration.chatDisplayMode, chatDisplayModeList, table.getn(chatDisplayModeList))
+            success, _configuration.chatDisplayMode = imgui.Combo("Select the chat to display.", _configuration.chatDisplayMode, chatDisplayModeList, table.getn(chatDisplayModeList))
             imgui.PopItemWidth()
             if success then
                 this.changed = true
