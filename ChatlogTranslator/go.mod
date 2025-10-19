@@ -1,4 +1,4 @@
-module translator
+module chatlogTranslator
 
 go 1.25.3
 

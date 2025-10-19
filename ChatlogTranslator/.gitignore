@@ -1,4 +1,5 @@
 log/*
 !log/.keep
 options.lua
-translator.exe
+chatlogTranslator.exe
+

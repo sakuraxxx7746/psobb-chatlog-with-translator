@@ -26,7 +26,7 @@ var (
 )
 
 const (
-    addonFolder = "./addons/TranslatorChatLog/"
+    addonFolder = "./addons/ChatLogTranslator/"
     logFolder = addonFolder + "log/"
     reLogName = `^chat\d+\.txt$`
     reApiKey = `deeplApiKey = (.+)$`
@@ -136,7 +136,7 @@ func messageBox(title, message string) {
 }
 
 func main() {
-    titleUTF16, _ := syscall.UTF16PtrFromString("Ephinea TranslatorChatlog")
+    titleUTF16, _ := syscall.UTF16PtrFromString("Ephinea ChatLogTranslator")
 	procSetConsoleTitle.Call(uintptr(unsafe.Pointer(titleUTF16)))
     fmt.Println("Please close this window. Translation is starting...")
 
@@ -169,8 +169,8 @@ func onReady() {
     infoLog("start appication...")
 
     systray.SetIcon(loadIcon())
-    systray.SetTitle("Ephinea TranslatorChatLog")
-    systray.SetTooltip("Ephinea TranslatorChatLog")
+    systray.SetTitle("Ephinea ChatLogTranslator")
+    systray.SetTooltip("Ephinea ChatLogTranslator")
 
     mQuit := systray.AddMenuItem("Quit", "Quit the application")
 

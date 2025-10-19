@@ -1,17 +1,17 @@
 local core_mainmenu = require("core_mainmenu")
-local cfg = require("TranslatorChatLog.configuration")
-local optionsLoaded, options = pcall(require, "TranslatorChatLog.options")
+local cfg = require("ChatLogTranslator.configuration")
+local optionsLoaded, options = pcall(require, "ChatLogTranslator.options")
 
-local optionsFileName = "addons/TranslatorChatLog/options.lua"
+local optionsFileName = "addons/ChatLogTranslator/options.lua"
 local firstPresent = true
 local ConfigurationWindow
 
 local today_date_str = os.date("%Y%m%d")
-local DATE_LOG_NAME = "addons/TranslatorChatLog/log/chat" .. today_date_str ..".txt"
-local LOG_PATH = "addons/TranslatorChatLog/log/"
-local TRANCELATED_LOG = "addons/TranslatorChatLog/log/translatedChat" .. today_date_str .. ".txt"
-local DEBUG_LOG = "addons/TranslatorChatLog/log/debug.txt"
-local TRANCELATION_ERROR_LOG = "addons/TranslatorChatLog/log/translation_error.txt"
+local DATE_LOG_NAME = "addons/ChatLogTranslator/log/chat" .. today_date_str ..".txt"
+local LOG_PATH = "addons/ChatLogTranslator/log/"
+local TRANCELATED_LOG = "addons/ChatLogTranslator/log/translatedChat" .. today_date_str .. ".txt"
+local DEBUG_LOG = "addons/ChatLogTranslator/log/debug.txt"
+local TRANCELATION_ERROR_LOG = "addons/ChatLogTranslator/log/translation_error.txt"
 
 
 -- Helpers in solylib
@@ -705,7 +705,7 @@ local function present()
         if options.clTransparentWindow == true then
             imgui.PushStyleColor("WindowBg", 0.0, 0.0, 0.0, 0.0)
         end
-        if imgui.Begin("TranslatorChatLog", nil, { options.clNoTitleBar, options.clNoResize, options.clNoMove, options.clNoTimestamp }) then
+        if imgui.Begin("ChatLogTranslator", nil, { options.clNoTitleBar, options.clNoResize, options.clNoMove, options.clNoTimestamp }) then
             imgui.SetWindowFontScale(options.fontScale)
             DoChat()
         end
@@ -726,14 +726,14 @@ local function init()
         ConfigurationWindow.open = not ConfigurationWindow.open
     end
 
-    core_mainmenu.add_button("TranslatorChatLog", mainMenuButtonHandler)
+    core_mainmenu.add_button("ChatLogTranslator", mainMenuButtonHandler)
 
     -- start translation appication
-    os.execute('start "" /B ".\\addons\\TranslatorChatLog\\translator.exe"')
+    os.execute('start "" /B ".\\addons\\ChatLogTranslator\\chatlogTranslator.exe"')
 
     return
     {
-        name = "TranslatorChatLog",
+        name = "ChatLogTranslator",
         version = "0.1.0",
         author = "sakura",
         present = present
