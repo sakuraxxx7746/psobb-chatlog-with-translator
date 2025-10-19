@@ -340,7 +340,7 @@ func checkAndTranslateFiles() {
         }
 
         if resp.StatusCode != 200 {
-            errorLog("translation request error. please check your Deepl Api key.")
+            errorLog("translation request error. please check your DeepL API Key.")
             return
         }
 

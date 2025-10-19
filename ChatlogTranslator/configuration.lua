@@ -137,7 +137,7 @@ local function ConfigurationWindow(configuration)
                 this.changed = true
             end
 
-            imgui.Text("language")
+            imgui.Text("Please set your language.")
             imgui.PushItemWidth(200)
             success, _configuration.language = imgui.Combo("language", _configuration.language, languageList, table.getn(languageList))
             imgui.PopItemWidth()
@@ -145,9 +145,9 @@ local function ConfigurationWindow(configuration)
                 this.changed = true
             end
 
-            imgui.Text("DeeL Api Key")
+            imgui.Text("Please set your DeepL API Key.")
             imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
-            success, currLang = imgui.InputText("DeeL Api Key", _configuration.deeplApiKey, 100)
+            success, currLang = imgui.InputText("DeepL API Key", _configuration.deeplApiKey, 100)
             if success then
                 _configuration.deeplApiKey = currLang
                 this.changed = true

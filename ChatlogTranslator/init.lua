@@ -317,8 +317,8 @@ local function readErrorLog()
         table.insert(trancelation_error_messages, {
             date = msg[1] or "",
             name =  "",
-            text = "",
-            trancelated = msg[2] or ""
+            text = msg[2] or "",
+            trancelated = "",
         })
     end
 
@@ -454,13 +454,15 @@ local function TextCustomColored(r, g, b, a, text)
     return imgui.TextColored(r, g, b, a, text)
 end
 
-local function drawing_messages(messages)
+local function drawing_messages(messages, isError)
     for i, msg in ipairs(messages) do
         local formattedText = msg.text
+        local formattedTrancelatedText = msg.trancelated
         -- Escape '%' if the base plugin is not updated. If the plugin is updated, then the output
         -- is written as-is without any additional substitutions.
         if pso.require_version == nil or not pso.require_version(3, 6, 0) then
-            formattedText = string.gsub(msg.trancelated, "%%", "%%%%") -- escape '%'
+            formattedText = string.gsub(msg.text, "%%", "%%%%") -- escape '%'
+            formattedTrancelatedText = string.gsub(msg.trancelated, "%%", "%%%%") -- escape '%'
         end
 
         -- **Timestamp Display**
@@ -474,8 +476,13 @@ local function drawing_messages(messages)
             nameFormat = msg.name
         end
 
+        local formatted = nil
         -- **Format Message**
-        local formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText)
+        if isError then
+            formatted = msg.formatted or (formattedText)
+        else
+            formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText .. options.clMessageSeparator .. formattedTrancelatedText)
+        end
         msg.formatted = formatted -- cache result for performance
         local lower = string.lower(msg.text) -- for case-insensitive matching
 
@@ -665,7 +672,7 @@ local function DoChat()
     readErrorLog()
     if #trancelation_error_messages > 0 then
         trancelated_messages = trancelation_error_messages
-        drawing_messages(trancelation_error_messages)
+        drawing_messages(trancelation_error_messages, true)
     else
         readLogFile()
         drawing_messages(trancelated_messages)
