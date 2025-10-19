@@ -128,9 +128,10 @@ if optionsLoaded then
     options.fontScale                 = NotNilOrDefault(options.fontScale, 1.0)
 
     -- tramslation setting
-    options.language                 = NotNilOrDefault(options.language, 1)
-    options.deeplApiKey                 = NotNilOrDefault(options.deeplApiKey, "")
+    options.language                  = NotNilOrDefault(options.language, 1)
+    options.deeplApiKey               = NotNilOrDefault(options.deeplApiKey, "")
 
+    options.chatDisplayMode           = NotNilOrDefault(options.chatDisplayMode, 1)
     options.clEnableWindow            = NotNilOrDefault(options.clEnableWindow, true)
     options.clHideWhenMenu            = NotNilOrDefault(options.clHideWhenMenu, true)
     options.clHideWhenSymbolChat      = NotNilOrDefault(options.clHideWhenSymbolChat, true)
@@ -169,6 +170,7 @@ else
         language = 1,
         deeplApiKey = "",
 
+        chatDisplayMode = 1,
         clEnableWindow = true,
         clHideWhenMenu = false,
         clHideWhenSymbolChat = false,
@@ -215,6 +217,7 @@ local function SaveOptions(options)
         io.write(string.format("    language = %s,\n", tostring(options.language)))
         io.write(string.format('    deeplApiKey = "%s",\n', tostring(options.deeplApiKey)))
         io.write("\n")
+        io.write(string.format('    chatDisplayMode = "%s",\n', tostring(options.chatDisplayMode)))
         io.write(string.format("    clEnableWindow = %s,\n", tostring(options.clEnableWindow)))
         io.write(string.format("    clHideWhenMenu = %s,\n", tostring(options.clHideWhenMenu)))
         io.write(string.format("    clHideWhenSymbolChat = %s,\n", tostring(options.clHideWhenSymbolChat)))
@@ -481,7 +484,13 @@ local function drawing_messages(messages, isError)
         if isError then
             formatted = msg.formatted or (formattedText)
         else
-            formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText .. options.clMessageSeparator .. formattedTrancelatedText)
+            if options.chatDisplayMode == 2 then
+                formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText)
+            elseif options.chatDisplayMode == 3 then
+                formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedTrancelatedText)
+            else
+                formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText .. options.clMessageSeparator .. formattedTrancelatedText)
+            end
         end
         msg.formatted = formatted -- cache result for performance
         local lower = string.lower(msg.text) -- for case-insensitive matching

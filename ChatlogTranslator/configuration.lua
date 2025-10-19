@@ -113,11 +113,17 @@ local function ConfigurationWindow(configuration)
         local success
         local languageList =
         {
-            "EN", "DE", "FR",
-            "ES", "PT", "IT",
-            "NL", "PL", "RU",
-            "JA", "ZH", "TR",
-            "UK",
+            "English", "German", "French",
+            "Spanish", "Portuguese", "Italian",
+            "Dutch", "Polish", "Russian",
+            "Japanese", "Chinese", "Turkish",
+            "Ukrainian",
+        }
+        local chatDisplayModeList =
+        {
+            "Both - original and translated chat",
+            "Only original chat",
+            "Only translated chat",
         }
         local anchorList =
         {
@@ -138,7 +144,7 @@ local function ConfigurationWindow(configuration)
             end
 
             imgui.Text("Please set your language.")
-            imgui.PushItemWidth(200)
+            imgui.PushItemWidth(100)
             success, _configuration.language = imgui.Combo("language", _configuration.language, languageList, table.getn(languageList))
             imgui.PopItemWidth()
             if success then
@@ -157,6 +163,14 @@ local function ConfigurationWindow(configuration)
         end
 
         if imgui.TreeNodeEx("TranslatorChatLog", "DefaultOpen") then
+
+            imgui.PushItemWidth(300)
+            success, _configuration.chatDisplayMode = imgui.Combo("select the chat to display.", _configuration.chatDisplayMode, chatDisplayModeList, table.getn(chatDisplayModeList))
+            imgui.PopItemWidth()
+            if success then
+                this.changed = true
+            end
+
             if imgui.Checkbox("Hide when menus are open", _configuration.clHideWhenMenu) then
                 _configuration.clHideWhenMenu = not _configuration.clHideWhenMenu
                 this.changed = true
