@@ -113,11 +113,46 @@ local function ConfigurationWindow(configuration)
         local success
         local languageList =
         {
-            "English", "German", "French",
-            "Spanish", "Portuguese", "Italian",
-            "Dutch", "Polish", "Russian",
-            "Japanese", "Chinese", "Turkish",
+            "Arabic",
+            "Bulgarian",
+            "Czech",
+            "Danish",
+            "German",
+            "Greek",
+            "English (unspecified variant for backward compatibility; we recommend usingEN-GB or EN-US instead)",
+            "English (British)",
+            "English (American)",
+            "Spanish",
+            "Spanish (Latin American)",
+            "Estonian",
+            "Finnish",
+            "French",
+            "Hebrew (text translation via next-gen models only)",
+            "Hungarian",
+            "Indonesian",
+            "Italian",
+            "Japanese",
+            "Korean",
+            "Lithuanian",
+            "Latvian",
+            "Norwegian Bokmål",
+            "Dutch",
+            "Polish",
+            "Portuguese (unspecified variant for backward compatibility; we recommend using PT-BR or PT-PT instead)",
+            "Portuguese (Brazilian)",
+            "Portuguese (all Portuguese variants excluding Brazilian Portuguese)",
+            "Romanian",
+            "Russian",
+            "Slovak",
+            "Slovenian",
+            "Swedish",
+            "Thai (text translation via next-gen models only)",
+            "Turkish",
             "Ukrainian",
+            "Vietnamese (text translation via next-gen models only)",
+            "Chinese (unspecified variant for backward compatibility; we recommend using ZH-HANS or ZH-HANT instead)",
+            "Chinese (simplified)",
+            "Chinese (traditional)",
         }
         local chatDisplayModeList =
         {
@@ -144,7 +179,7 @@ local function ConfigurationWindow(configuration)
             end
 
             imgui.Text("Please set your language.")
-            imgui.PushItemWidth(100)
+            imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
             success, _configuration.language = imgui.Combo("language", _configuration.language, languageList, table.getn(languageList))
             imgui.PopItemWidth()
             if success then
