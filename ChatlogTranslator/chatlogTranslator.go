@@ -150,7 +150,7 @@ func main() {
     name, _ := windows.UTF16PtrFromString("Global\\TranlatorChatLogMutex")
     mutex, err := windows.CreateMutex(nil, false, name)
     if err != nil {
-        errorLog("Failed to create mutex. ", err)
+        // errorLog("Failed to create mutex. ", err)
         return
     }
 
