@@ -60,6 +60,7 @@ func write (path string, message string) {
     os.WriteFile(path, []byte(message + "\n"), 0644)
 }
 
+// append log function
 // func write(path string, message string) {
 //     ft, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 //     if err != nil {
@@ -138,7 +139,7 @@ func messageBox(title, message string) {
 func main() {
     titleUTF16, _ := syscall.UTF16PtrFromString("Ephinea ChatLogTranslator")
 	procSetConsoleTitle.Call(uintptr(unsafe.Pointer(titleUTF16)))
-    fmt.Println("Please close this window. Translation is starting...")
+    // fmt.Println("Please close this window. Translation is starting...")
 
     // If PSOBB is not running, terminate the process.
     if !processExists("psobb.exe") {
