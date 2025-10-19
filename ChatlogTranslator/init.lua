@@ -6,10 +6,7 @@ local optionsFileName = "addons/ChatLogTranslator/options.lua"
 local firstPresent = true
 local ConfigurationWindow
 
-local today_date_str = os.date("%Y%m%d")
-local DATE_LOG_NAME = "addons/ChatLogTranslator/log/chat" .. today_date_str ..".txt"
 local LOG_PATH = "addons/ChatLogTranslator/log/"
-local TRANCELATED_LOG = "addons/ChatLogTranslator/log/translatedChat" .. today_date_str .. ".txt"
 local DEBUG_LOG = "addons/ChatLogTranslator/log/debug.txt"
 local TRANCELATION_ERROR_LOG = "addons/ChatLogTranslator/log/translation_error.txt"
 
@@ -254,6 +251,16 @@ local function SaveOptions(options)
     end
 end
 
+local function getChatLogFileName()
+    local today_date_str = os.date("%Y%m%d")
+    return LOG_PATH .. "chat" .. today_date_str .. ".txt"
+end
+
+local function getTransLatedChatLogFileName()
+    local today_date_str = os.date("%Y%m%d")
+    return LOG_PATH .. "translatedChat" .. today_date_str .. ".txt"
+end
+
 local function logFomatter(msg)
     -- write log file format
     -- m:d:y h:m:s \t gcno \t name \t text
@@ -331,7 +338,7 @@ end
 
 local function readLogFile()
     trancelated_messages = {}
-    local file = io.open(TRANCELATED_LOG, "r")
+    local file = io.open(getTransLatedChatLogFileName(), "r")
     if not file then return end
 
     local buffer = {}
@@ -666,7 +673,7 @@ local function DoChat()
                     msg.date = os.date("%H:%M:%S", os.time())
                     table.insert(output_messages, msg)
                     -- logging for transrator addon
-                    logging(logFomatter(msg), DATE_LOG_NAME)
+                    logging(logFomatter(msg), getChatLogFileName())
                     -- remove from start if log is too long
                     if #output_messages > MAX_LOG_SIZE then
                         table.remove(output_messages, 1)
