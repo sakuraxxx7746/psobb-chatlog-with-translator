@@ -13,6 +13,8 @@ local TRANCELATED_LOG = "addons/ChatLogTranslator/log/translatedChat" .. today_d
 local DEBUG_LOG = "addons/ChatLogTranslator/log/debug.txt"
 local TRANCELATION_ERROR_LOG = "addons/ChatLogTranslator/log/translation_error.txt"
 
+-- Translator app status
+local isTranslatorRunning = false
 
 -- Helpers in solylib
 local function _getMenuState()
@@ -702,9 +704,24 @@ local function present()
         SaveOptions(options)
     end
 
+    -- stop translation appication when addon is disable
+    if isTranslatorRunning and options.enable == false then
+        os.execute('taskkill /IM "chatlogTranslator.exe" /F')
+        isTranslatorRunning = false
+        return
+    end
+
     -- Global enable here to let the configuration window work
     if options.enable == false then
         return
+    end
+
+    -- start translation appication when addon is enable
+    if options.enable then
+        if not isTranslatorRunning then
+            os.execute('start "" /B ".\\addons\\ChatLogTranslator\\chatlogTranslator.exe"')
+            isTranslatorRunning = true
+        end
     end
 
     if (options.clEnableWindow == true)
@@ -743,9 +760,6 @@ local function init()
     end
 
     core_mainmenu.add_button("ChatLogTranslator", mainMenuButtonHandler)
-
-    -- start translation appication
-    os.execute('start "" /B ".\\addons\\ChatLogTranslator\\chatlogTranslator.exe"')
 
     return
     {
