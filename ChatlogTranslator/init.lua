@@ -771,7 +771,7 @@ local function init()
     return
     {
         name = "ChatLogTranslator",
-        version = "1.0.0",
+        version = "1.0.1",
         author = "sakura",
         present = present
     }
