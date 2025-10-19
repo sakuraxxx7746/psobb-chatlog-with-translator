@@ -1,7 +1,7 @@
 local function ConfigurationWindow(configuration)
     local this = 
     {
-        title = "Chatlog - Configuration",
+        title = "TranslatorChatLog - Configuration",
         fontScale = 1.0,
         open = false,
         changed = false,
@@ -111,6 +111,14 @@ local function ConfigurationWindow(configuration)
 
     local _showWindowSettings = function()
         local success
+        local languageList =
+        {
+            "EN", "DE", "FR",
+            "ES", "PT", "IT",
+            "NL", "PL", "RU",
+            "JA", "ZH", "TR",
+            "UK",
+        }
         local anchorList =
         {
             "Top Left (Disabled)", "Left", "Bottom Left",
@@ -129,10 +137,26 @@ local function ConfigurationWindow(configuration)
                 this.changed = true
             end
 
+            imgui.Text("language")
+            imgui.PushItemWidth(200)
+            success, _configuration.language = imgui.Combo("language", _configuration.language, languageList, table.getn(languageList))
+            imgui.PopItemWidth()
+            if success then
+                this.changed = true
+            end
+
+            imgui.Text("DeeL Api Key")
+            imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
+            success, currLang = imgui.InputText("DeeL Api Key", _configuration.deeplApiKey, 100)
+            if success then
+                _configuration.deeplApiKey = currLang
+                this.changed = true
+            end
+
             imgui.TreePop()
         end
 
-        if imgui.TreeNodeEx("Chatlog", "DefaultOpen") then
+        if imgui.TreeNodeEx("TranslatorChatLog", "DefaultOpen") then
             if imgui.Checkbox("Hide when menus are open", _configuration.clHideWhenMenu) then
                 _configuration.clHideWhenMenu = not _configuration.clHideWhenMenu
                 this.changed = true

@@ -1,10 +1,18 @@
 local core_mainmenu = require("core_mainmenu")
-local cfg = require("Chatlog.configuration")
-local optionsLoaded, options = pcall(require, "Chatlog.options")
+local cfg = require("TranslatorChatLog.configuration")
+local optionsLoaded, options = pcall(require, "TranslatorChatLog.options")
 
-local optionsFileName = "addons/Chatlog/options.lua"
+local optionsFileName = "addons/TranslatorChatLog/options.lua"
 local firstPresent = true
 local ConfigurationWindow
+
+local today_date_str = os.date("%Y%m%d")
+local DATE_LOG_NAME = "addons/TranslatorChatLog/log/chat" .. today_date_str ..".txt"
+local LOG_PATH = "addons/TranslatorChatLog/log/"
+local TRANCELATED_LOG = "addons/TranslatorChatLog/log/translatedChat" .. today_date_str .. ".txt"
+local DEBUG_LOG = "addons/TranslatorChatLog/log/debug.txt"
+local TRANCELATION_ERROR_LOG = "addons/TranslatorChatLog/log/translation_error.txt"
+
 
 -- Helpers in solylib
 local function _getMenuState()
@@ -119,6 +127,10 @@ if optionsLoaded then
     options.useCustomTheme            = NotNilOrDefault(options.useCustomTheme, false)
     options.fontScale                 = NotNilOrDefault(options.fontScale, 1.0)
 
+    -- tramslation setting
+    options.language                 = NotNilOrDefault(options.language, 1)
+    options.deeplApiKey                 = NotNilOrDefault(options.deeplApiKey, "")
+
     options.clEnableWindow            = NotNilOrDefault(options.clEnableWindow, true)
     options.clHideWhenMenu            = NotNilOrDefault(options.clHideWhenMenu, true)
     options.clHideWhenSymbolChat      = NotNilOrDefault(options.clHideWhenSymbolChat, true)
@@ -154,6 +166,8 @@ else
         enable = true,
         useCustomTheme = false,
         fontScale = 1.0,
+        language = 1,
+        deeplApiKey = "",
 
         clEnableWindow = true,
         clHideWhenMenu = false,
@@ -198,6 +212,9 @@ local function SaveOptions(options)
         io.write(string.format("    useCustomTheme = %s,\n", tostring(options.useCustomTheme)))
         io.write(string.format("    fontScale = %s,\n", tostring(options.fontScale)))
         io.write("\n")
+        io.write(string.format("    language = %s,\n", tostring(options.language)))
+        io.write(string.format('    deeplApiKey = "%s",\n', tostring(options.deeplApiKey)))
+        io.write("\n")
         io.write(string.format("    clEnableWindow = %s,\n", tostring(options.clEnableWindow)))
         io.write(string.format("    clHideWhenMenu = %s,\n", tostring(options.clHideWhenMenu)))
         io.write(string.format("    clHideWhenSymbolChat = %s,\n", tostring(options.clHideWhenSymbolChat)))
@@ -232,6 +249,28 @@ local function SaveOptions(options)
     end
 end
 
+local function logFomatter(msg)
+    -- write log file format
+    -- m:d:y h:m:s \t gcno \t name \t text
+    return msg.date.."\t" ..msg.name.."\t" ..msg.text
+end
+
+local function logging(msg, path)
+    if path == nil then
+        path = DEBUG_LOG
+    end
+
+    local timestamp = os.date('%Y%m%d%H%M%S')  -- 現在時刻のUNIXタイム
+    local filename = "chat" .. timestamp .. ".txt"
+
+    -- Create file
+    local file = io.open(LOG_PATH .. filename, "a")
+
+    io.output(file)
+    io.write(msg.."\n")
+    io.close(file)
+end
+
 
 local CHAT_PTR = 0x00A9A920
 local prevmaxy = 0
@@ -250,6 +289,70 @@ local QCHAT_REPLACE = "(> )\t[" .. LOCALES .. "]"
 local MAX_GAME_LOG = 29 -- max amount of messages the game stores
 local MAX_MSG_SIZE = 100 -- not correct but close enough, character name length seems to affect it
 local output_messages = {}
+local trancelated_messages = {}
+local trancelation_error_messages = {}
+
+local function readErrorLog()
+    trancelation_error_messages = {}
+    local file = io.open(TRANCELATION_ERROR_LOG, "r")
+    if not file then return end
+
+    local buffer = {}
+    for line in file:lines() do
+        table.insert(buffer, line)
+    end
+    file:close()
+
+    if #buffer == 0 then
+        return nil
+    end
+
+    for _, line in ipairs(buffer) do
+        local msg = {}
+        for substr in string.gmatch(line, "[^\t]+") do
+            table.insert(msg, substr)
+        end
+        print(msg[2])
+        -- add output_messages
+        table.insert(trancelation_error_messages, {
+            date = msg[1] or "",
+            name =  "",
+            text = "",
+            trancelated = msg[2] or ""
+        })
+    end
+
+end
+
+local function readLogFile()
+    trancelated_messages = {}
+    local file = io.open(TRANCELATED_LOG, "r")
+    if not file then return end
+
+    local buffer = {}
+    for line in file:lines() do
+        table.insert(buffer, line)
+        -- When the size exceeds MAX_LOG_SIZE, delete the oldest.
+        if #buffer > MAX_MSG_SIZE then
+            table.remove(buffer, 1)
+        end
+    end
+    file:close()
+
+    for _, line in ipairs(buffer) do
+        local msg = {}
+        for substr in string.gmatch(line, "[^\t]+") do
+            table.insert(msg, substr)
+        end
+        -- add output_messages
+        table.insert(trancelated_messages, {
+            date = msg[1] or "",
+            name = msg[2] or "",
+            text = msg[3] or "",
+            trancelated = msg[4] or ""
+        })
+    end
+end
 
 local function get_chat_log()
     local messages = {}
@@ -351,6 +454,148 @@ local function TextCustomColored(r, g, b, a, text)
     return imgui.TextColored(r, g, b, a, text)
 end
 
+local function drawing_messages(messages)
+    for i, msg in ipairs(messages) do
+        local formattedText = msg.text
+        -- Escape '%' if the base plugin is not updated. If the plugin is updated, then the output
+        -- is written as-is without any additional substitutions.
+        if pso.require_version == nil or not pso.require_version(3, 6, 0) then
+            formattedText = string.gsub(msg.trancelated, "%%", "%%%%") -- escape '%'
+        end
+
+        -- **Timestamp Display**
+        local timestampPart = (options.clNoTimestamp ~= "NoTimestamp") and ("[" .. msg.date .. "] ") or ""
+
+        -- **Name Formatting**
+        local nameFormat = ""
+        if options.clFixedWidthNames then
+            nameFormat = string.format("%-11s", msg.name)
+        else
+            nameFormat = msg.name
+        end
+
+        -- **Format Message**
+        local formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText)
+        msg.formatted = formatted -- cache result for performance
+        local lower = string.lower(msg.text) -- for case-insensitive matching
+
+        local highlightColor = getHighlightColor()
+
+        -- full word match own name
+        -- Modify the highlighting code section (around line 424-445)
+        if msg.hilight or (#own_name > 0 and string.match(lower, own_name) and
+        (
+            string.match(lower, "^" .. own_name .. "[%p%s]") or
+            string.match(lower, "[%p%s]" .. own_name .. "[%p%s]") or
+            string.match(lower, "[%p%s]" .. own_name .. "$") or
+            string.match(lower, "^" .. own_name .. "$")
+        )) then
+            -- hilight message - but use the same components as colored names
+            local windowWidth = imgui.GetWindowWidth()
+            imgui.PushTextWrapPos(windowWidth - 10)
+
+            if options.clColoredNames then
+                -- Display timestamp (if enabled) with highlight color
+                if options.clNoTimestamp ~= "NoTimestamp" then
+                    imgui.TextColored(
+                        highlightColor[1],
+                        highlightColor[2],
+                        highlightColor[3],
+                        highlightColor[4],
+                        timestampPart
+                    )
+
+                    imgui.SameLine(0, 0)  -- No spacing
+                end
+
+                -- Display name with highlight color
+                imgui.TextColored(
+                    highlightColor[1],
+                    highlightColor[2],
+                    highlightColor[3],
+                    highlightColor[4],
+                    nameFormat
+                )
+                -- Display separator with highlight color
+                imgui.SameLine(0, 0)
+                imgui.TextColored(
+                    highlightColor[1],
+                    highlightColor[2],
+                    highlightColor[3],
+                    highlightColor[4],
+                    options.clMessageSeparator
+                )
+                imgui.SameLine(0, 0)
+
+                -- Display message with highlight color
+                imgui.TextColored(
+                    highlightColor[1],
+                    highlightColor[2],
+                    highlightColor[3],
+                    highlightColor[4],
+                    formattedText
+                )
+            else
+                -- For non-colored names, just highlight the whole formatted text
+                -- But recreate it with the current separator rather than using cached
+                local currentFormatted = timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText
+
+                imgui.TextColored(
+                    highlightColor[1],
+                    highlightColor[2],
+                    highlightColor[3],
+                    highlightColor[4],
+                    currentFormatted
+                )
+            end
+
+        imgui.PopTextWrapPos()
+        msg.hilight = true
+
+        else
+            -- no hilight
+            if options.clColoredNames then
+                local windowWidth = imgui.GetWindowWidth()
+                imgui.PushTextWrapPos(windowWidth - 10) -- Set wrap width to window width minus a small margin
+
+                -- Display timestamp (if enabled) with default color
+                if options.clNoTimestamp ~= "NoTimestamp" then
+                    imgui.Text(timestampPart)
+                    imgui.SameLine(0, 0)  -- No spacing
+                end
+
+                -- Display name with custom color
+                imgui.TextColored(
+                    options.clNameColorR,
+                    options.clNameColorG,
+                    options.clNameColorB,
+                    options.clNameColorA,
+                    nameFormat
+                )
+
+                -- Display separator and message with default color
+                imgui.SameLine(0, 0)
+                imgui.Text(options.clMessageSeparator)
+                imgui.SameLine(0, 0)
+
+                imgui.Text(formattedText)
+                imgui.PopTextWrapPos()
+            else
+                local windowWidth = imgui.GetWindowWidth()
+                imgui.PushTextWrapPos(windowWidth - 10)
+                imgui.Text(formatted)
+                imgui.PopTextWrapPos()
+            end
+        end
+
+        if scrolldown then
+            imgui.SetScrollY(imgui.GetScrollMaxY())
+        end
+
+        prevmaxy = imgui.GetScrollMaxY()
+    end
+end
+
 local function DoChat()
     counter = counter + 1
 
@@ -402,6 +647,8 @@ local function DoChat()
                     local msg = updated_messages[i]
                     msg.date = os.date("%H:%M:%S", os.time())
                     table.insert(output_messages, msg)
+                    -- logging for transrator addon
+                    logging(logFomatter(msg), DATE_LOG_NAME)
                     -- remove from start if log is too long
                     if #output_messages > MAX_LOG_SIZE then
                         table.remove(output_messages, 1)
@@ -409,149 +656,19 @@ local function DoChat()
                 end
             end
         end
-        
+
+
         counter = 0
     end
 
     -- draw messages
-    for i, msg in ipairs(output_messages) do
-        local formattedText = msg.text
-        -- Escape '%' if the base plugin is not updated. If the plugin is updated, then the output
-        -- is written as-is without any additional substitutions.
-        if pso.require_version == nil or not pso.require_version(3, 6, 0) then
-            formattedText = string.gsub(msg.text, "%%", "%%%%") -- escape '%'
-        end
-
-        -- **Timestamp Display**
-        local timestampPart = (options.clNoTimestamp ~= "NoTimestamp") and ("[" .. msg.date .. "] ") or ""
-
-        -- **Name Formatting**
-        local nameFormat = ""
-        if options.clFixedWidthNames then
-            nameFormat = string.format("%-11s", msg.name)
-        else
-            nameFormat = msg.name
-        end
-
-        -- **Format Message**
-        local formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText)
-        msg.formatted = formatted -- cache result for performance
-        local lower = string.lower(msg.text) -- for case-insensitive matching
-
-        local highlightColor = getHighlightColor()
-
-        -- full word match own name
--- Modify the highlighting code section (around line 424-445)
-if msg.hilight or (#own_name > 0 and string.match(lower, own_name) and
-    (
-        string.match(lower, "^" .. own_name .. "[%p%s]") or
-        string.match(lower, "[%p%s]" .. own_name .. "[%p%s]") or
-        string.match(lower, "[%p%s]" .. own_name .. "$") or
-        string.match(lower, "^" .. own_name .. "$")
-    )) then
-        -- hilight message - but use the same components as colored names
-        local windowWidth = imgui.GetWindowWidth()
-        imgui.PushTextWrapPos(windowWidth - 10)
-
-        if options.clColoredNames then
-            -- Display timestamp (if enabled) with highlight color
-            if options.clNoTimestamp ~= "NoTimestamp" then
-                imgui.TextColored(
-                    highlightColor[1],
-                    highlightColor[2],
-                    highlightColor[3],
-                    highlightColor[4],
-                    timestampPart
-                )
-
-                imgui.SameLine(0, 0)  -- No spacing
-            end
-
-            -- Display name with highlight color
-            imgui.TextColored(
-                highlightColor[1],
-                highlightColor[2],
-                highlightColor[3],
-                highlightColor[4],
-                nameFormat
-            )
-            -- Display separator with highlight color
-            imgui.SameLine(0, 0)
-            imgui.TextColored(
-                highlightColor[1],
-                highlightColor[2],
-                highlightColor[3],
-                highlightColor[4],
-                options.clMessageSeparator
-            )
-            imgui.SameLine(0, 0)
-
-            -- Display message with highlight color
-            imgui.TextColored(
-                highlightColor[1],
-                highlightColor[2],
-                highlightColor[3],
-                highlightColor[4],
-                formattedText
-            )
-        else
-            -- For non-colored names, just highlight the whole formatted text
-            -- But recreate it with the current separator rather than using cached
-            local currentFormatted = timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText
-
-            imgui.TextColored(
-                highlightColor[1],
-                highlightColor[2],
-                highlightColor[3],
-                highlightColor[4],
-                currentFormatted
-            )
-        end
-
-        imgui.PopTextWrapPos()
-        msg.hilight = true
-
-        else
-            -- no hilight
-            if options.clColoredNames then
-                local windowWidth = imgui.GetWindowWidth()
-                imgui.PushTextWrapPos(windowWidth - 10) -- Set wrap width to window width minus a small margin
-
-                -- Display timestamp (if enabled) with default color
-                if options.clNoTimestamp ~= "NoTimestamp" then
-                    imgui.Text(timestampPart)
-                    imgui.SameLine(0, 0)  -- No spacing
-                end
-
-                -- Display name with custom color
-                imgui.TextColored(
-                    options.clNameColorR,
-                    options.clNameColorG,
-                    options.clNameColorB,
-                    options.clNameColorA,
-                    nameFormat
-                )
-
-                -- Display separator and message with default color
-                imgui.SameLine(0, 0)
-                imgui.Text(options.clMessageSeparator)
-                imgui.SameLine(0, 0)
-
-                imgui.Text(formattedText)
-                imgui.PopTextWrapPos()
-            else
-                local windowWidth = imgui.GetWindowWidth()
-                imgui.PushTextWrapPos(windowWidth - 10)
-                imgui.Text(formatted)
-                imgui.PopTextWrapPos()
-            end
-        end
-
-        if scrolldown then
-            imgui.SetScrollY(imgui.GetScrollMaxY())
-        end
-
-        prevmaxy = imgui.GetScrollMaxY()
+    readErrorLog()
+    if #trancelation_error_messages > 0 then
+        trancelated_messages = trancelation_error_messages
+        drawing_messages(trancelation_error_messages)
+    else
+        readLogFile()
+        drawing_messages(trancelated_messages)
     end
 end
 
@@ -588,7 +705,7 @@ local function present()
         if options.clTransparentWindow == true then
             imgui.PushStyleColor("WindowBg", 0.0, 0.0, 0.0, 0.0)
         end
-        if imgui.Begin("Chatlog", nil, { options.clNoTitleBar, options.clNoResize, options.clNoMove, options.clNoTimestamp }) then
+        if imgui.Begin("TranslatorChatLog", nil, { options.clNoTitleBar, options.clNoResize, options.clNoMove, options.clNoTimestamp }) then
             imgui.SetWindowFontScale(options.fontScale)
             DoChat()
         end
@@ -609,13 +726,16 @@ local function init()
         ConfigurationWindow.open = not ConfigurationWindow.open
     end
 
-    core_mainmenu.add_button("Chatlog", mainMenuButtonHandler)
+    core_mainmenu.add_button("TranslatorChatLog", mainMenuButtonHandler)
+
+    -- start translation appication
+    os.execute('start "" /B ".\\addons\\TranslatorChatLog\\translator.exe"')
 
     return
     {
-        name = "Chatlog",
-        version = "0.1.1",
-        author = "esc",
+        name = "TranslatorChatLog",
+        version = "0.1.0",
+        author = "sakura",
         present = present
     }
 end
