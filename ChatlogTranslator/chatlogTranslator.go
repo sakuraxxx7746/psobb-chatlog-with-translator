@@ -244,7 +244,7 @@ func checkAndTranslateFiles() {
     defer L.Close()
 
     if err := L.DoFile(luaOptions); err != nil {
-        errorLog("not found addon setting file. (options.lua)")
+        errorLog("DeepL API key not set. Please set it in the configuration.")
         return
     }
 
@@ -253,11 +253,11 @@ func checkAndTranslateFiles() {
         apiKeyVal := tblTable.RawGetString("deeplApiKey")
         apiKeyStr, ok := apiKeyVal.(lua.LString)
         if !ok {
-            errorLog("Faild to get DeepL API key.")
+            errorLog("DeepL API key not set. Please set it in the configuration.")
             return
         }
         if string(apiKeyStr) == "" {
-            errorLog("DeepL API key not set. Please set it.")
+            errorLog("DeepL API Key not set. Please set it.")
             return
         }
         apiKey = string(apiKeyStr)
