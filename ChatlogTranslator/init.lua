@@ -166,7 +166,7 @@ else
         enable = true,
         useCustomTheme = false,
         fontScale = 1.0,
-        language = 1,
+        language = 9,
         deeplApiKey = "",
 
         chatDisplayMode = 1,
