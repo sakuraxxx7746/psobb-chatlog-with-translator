@@ -126,11 +126,11 @@ if optionsLoaded then
     options.useCustomTheme            = NotNilOrDefault(options.useCustomTheme, false)
     options.fontScale                 = NotNilOrDefault(options.fontScale, 1.0)
 
-    -- tramslation setting
+    -- translation setting
     options.language                  = NotNilOrDefault(options.language, 9)
     options.deeplApiKey               = NotNilOrDefault(options.deeplApiKey, "")
-
     options.chatDisplayMode           = NotNilOrDefault(options.chatDisplayMode, 1)
+
     options.clEnableWindow            = NotNilOrDefault(options.clEnableWindow, true)
     options.clHideWhenMenu            = NotNilOrDefault(options.clHideWhenMenu, true)
     options.clHideWhenSymbolChat      = NotNilOrDefault(options.clHideWhenSymbolChat, true)
