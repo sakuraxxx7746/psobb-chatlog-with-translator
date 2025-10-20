@@ -498,7 +498,11 @@ local function drawing_messages(messages, isError)
             elseif options.chatDisplayMode == 3 then
                 formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedTrancelatedText)
             else
-                formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText .. options.clMessageSeparator .. formattedTrancelatedText)
+                -- Display both only when translated.
+                if formattedText ~= formattedTrancelatedText then
+                    formattedText = formattedText .. options.clMessageSeparator .. formattedTrancelatedText
+                end
+                formatted = msg.formatted or (timestampPart .. nameFormat .. options.clMessageSeparator .. formattedText)
             end
         end
         msg.formatted = formatted -- cache result for performance
@@ -771,7 +775,6 @@ local function init()
     return
     {
         name = "ChatLogTranslator",
-        version = "1.0.1",
         author = "sakura",
         present = present
     }
