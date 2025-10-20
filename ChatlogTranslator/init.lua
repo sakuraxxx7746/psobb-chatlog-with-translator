@@ -127,7 +127,7 @@ if optionsLoaded then
     options.fontScale                 = NotNilOrDefault(options.fontScale, 1.0)
 
     -- tramslation setting
-    options.language                  = NotNilOrDefault(options.language, 1)
+    options.language                  = NotNilOrDefault(options.language, 9)
     options.deeplApiKey               = NotNilOrDefault(options.deeplApiKey, "")
 
     options.chatDisplayMode           = NotNilOrDefault(options.chatDisplayMode, 1)
