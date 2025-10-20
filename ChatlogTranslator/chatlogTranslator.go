@@ -38,6 +38,7 @@ const (
     endpoint = "https://api-free.deepl.com/v2/translate"
     iconFile = addonFolder + "redria.ico"
     luaOptions = addonFolder + "options.lua"
+    gameWindowTitle = "Ephinea: Phantasy Star Online Blue Burst"
 )
 
 var languages = []string{
@@ -138,33 +139,21 @@ func loadIcon() []byte {
     }
 }
 
-func processExists(procName string) bool {
-    // プロセススナップショット作成
-    snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
-    if err != nil {
-        return false
-    }
-    defer windows.CloseHandle(snapshot)
+func findWindow(title string) (uintptr, error) {
+    user32 := windows.NewLazySystemDLL("user32.dll")
+    procFindWindow := user32.NewProc("FindWindowW")
 
-    var entry windows.ProcessEntry32
-    entry.Size = uint32(unsafe.Sizeof(entry))
-
-    if err := windows.Process32First(snapshot, &entry); err != nil {
-        return false
-    }
-
-    for {
-        exe := windows.UTF16ToString(entry.ExeFile[:])
-        if strings.EqualFold(exe, procName) { // 大文字小文字を無視して比較
-            return true
-        }
-        if err := windows.Process32Next(snapshot, &entry); err != nil {
-            break
-        }
-    }
-
-    return false
+    ptr := windows.StringToUTF16Ptr(title)
+    hwnd, _, err := procFindWindow.Call(
+        0, // class name (null)
+        uintptr(unsafe.Pointer(ptr)),
+    )
+	if hwnd == 0 {
+		return 0, err
+	}
+    return hwnd, nil
 }
+
 
 func messageBox(title, message string) {
     windows.MessageBox(0,
@@ -174,15 +163,13 @@ func messageBox(title, message string) {
 }
 
 func main() {
-    titleUTF16, _ := syscall.UTF16PtrFromString("Ephinea ChatLogTranslator")
-	procSetConsoleTitle.Call(uintptr(unsafe.Pointer(titleUTF16)))
-    // fmt.Println("Please close this window. Translation is starting...")
 
     // If PSOBB is not running, terminate the process.
-    if !processExists("psobb.exe") {
-        messageBox("Warning", "Psobb is not running. Start the Psobb first.")
+    _, err := findWindow(gameWindowTitle)
+	if err != nil {
+        messageBox("Warning", "PSOBB is not running. Start the PSOBB first.")
         return
-    }
+	}
 
     name, _ := windows.UTF16PtrFromString("Global\\TranlatorChatLogMutex")
     mutex, err := windows.CreateMutex(nil, false, name)
@@ -227,8 +214,9 @@ func onReady() {
     go func() {
         for {
             // If PSOBB is stopped, terminate the process.
-            if !processExists("psobb.exe") {
-                os.Exit(0)
+            _, err := findWindow(gameWindowTitle)
+                if err != nil {
+                    os.Exit(0)
             }
 
             infoLog("execute...")
