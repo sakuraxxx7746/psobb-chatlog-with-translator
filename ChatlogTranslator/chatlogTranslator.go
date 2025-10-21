@@ -24,6 +24,8 @@ import (
 )
 
 const (
+    enableAppendLog = false
+    enableInfoLog = false
     addonFolder = "./addons/ChatLogTranslator/"
     logFolder = addonFolder + "log/"
     reLogName = `^chat\d+\.txt$`
@@ -77,40 +79,32 @@ var googleLanguages = []string{
     "ar",
 }
 
-var mutex windows.Handle
-
-type TranslationResponse struct {
-    Text string `json:"text"`
-}
-
-type DeepLResponse struct {
-    Translations []TranslationResponse `json:"translations"`
-}
-
-// func write (path string, message string) {
-//     os.WriteFile(path, []byte(message + "\n"), 0644)
-// }
-
 // append log function
 func write(path string, message string) {
-    ft, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-    if err != nil {
-        fmt.Println("Failed to open logger file:", err)
-    }
+    if enableAppendLog {
+        ft, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+        if err != nil {
+            fmt.Println("Failed to open logger file:", err)
+        }
 
-    _, err = ft.WriteString(message + "\n")
-    if err != nil {
-        fmt.Println("Failed to write to logger file:", err)
+        _, err = ft.WriteString(message + "\n")
+        if err != nil {
+            fmt.Println("Failed to write to logger file:", err)
+        }
+    } else {
+        os.WriteFile(path, []byte(message + "\n"), 0644)
     }
 }
 
 func infoLog(args ...interface{}) {
-    timestamp := time.Now().Format("2006-01-02 15:04:05")
-    msg := fmt.Sprint(args...)
-    line := timestamp + "\t" + msg
+    if enableInfoLog {
+        timestamp := time.Now().Format("2006-01-02 15:04:05")
+        msg := fmt.Sprint(args...)
+        line := timestamp + "\t" + msg
 
-    write(infoLogFile, line)
-    // fmt.Println(line)
+        write(infoLogFile, line)
+        // fmt.Println(line)
+    }
 }
 
 func errorLog(args ...interface{}) {
@@ -300,59 +294,84 @@ func readChatlogMessages(filenames []string) [][]string {
     return messages
 }
 
-func translateByDeeplApi(messages [][]string, apiKey string, language string, outputFile string) {
-    data := url.Values{}
-    data.Set("auth_key", apiKey)
-    data.Set("target_lang", language)
+func writeTranslatedLog(originalChat [][]string, transResults []string) {
 
-    var respStruct DeepLResponse
-    for _, message := range messages {
-        data.Add("text", message[2])
-    }
+    // today Date
+    dateStr := time.Now().Format("20060102")
+	dateLog := fmt.Sprintf("%s%s%s.txt", logFolder, translatedChatlogName, dateStr)
 
-    // GETリクエスト
-    resp, err := http.Post(deeplUrl, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+    f, err := os.OpenFile(dateLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
     if err != nil {
-        errorLog("translation request error. (Deepl)", err)
-        return
-    }
-
-    if resp.StatusCode != http.StatusOK {
-        errorLog("translation request error. please check your DeepL API Key.", err)
-        return
-    }
-
-    body, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        errorLog("Failed to read response body. (Deepl)", err)
-        return
-    }
-
-    err = json.Unmarshal(body, &respStruct)
-    if err != nil {
-        errorLog("failed to parse JSON response. (Deepl)", err)
-        return
-    }
-
-    f, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-    if err != nil {
-        errorLog("Failed to open translated log file.", err)
+        errorLog("Failed to open translated log file.")
         return
     }
     defer f.Close()
 
-    for i, t := range respStruct.Translations {
-        line := messages[i][0] + "\t" + messages[i][1] + "\t" + messages[i][2] + "\t" + t.Text + "\n"
+    for i, t := range transResults {
+        line := originalChat[i][0] + "\t" + originalChat[i][1] + "\t" + originalChat[i][2] + "\t" + t + "\n"
 
         if _, err := f.WriteString(line); err != nil {
-            errorLog("Failed to write to translated log file.", err)
+            errorLog("Failed to write to translated log file.")
             return
         }
     }
-    resp.Body.Close()
 }
 
-func translateByGas(messages [][]string, depId string, language string, outputFile string) {
+func translateByDeeplApi(messages [][]string, apiKey string, language string) {
+    
+    type DeepLResponse struct {
+        Translations []struct {
+            Text string `json:"text"`
+        } `json:"translations"`
+    }
+
+    data := url.Values{}
+    data.Set("auth_key", apiKey)
+    data.Set("target_lang", language)
+
+    var results DeepLResponse
+    for _, message := range messages {
+        data.Add("text", message[2])
+    }
+
+    // http request
+    resp, err := http.Post(deeplUrl, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+    if err != nil {
+        errorLog("translation request error. (Deepl)")
+        return
+    }
+    defer resp.Body.Close() 
+
+    // check status
+    if resp.StatusCode != http.StatusOK {
+        errorLog("translation request error. please check your DeepL API Key.")
+        return
+    }
+
+    // check read body
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        errorLog("Failed to read response body. (Deepl)")
+        return
+    }
+
+    // check parse
+    err = json.Unmarshal(body, &results)
+    if err != nil {
+        errorLog("failed to parse JSON response. (Deepl)")
+        return
+    }
+
+    // convert to array
+    _results := make([]string, len(results.Translations))
+     for i, t := range results.Translations {
+        _results[i] = t.Text
+    }
+
+    writeTranslatedLog(messages, _results)
+}
+
+func translateByGas(messages [][]string, depId string, language string) {
     apiURL := gasUrl + depId + "/exec"
 
 	texts := []string{}
@@ -367,47 +386,33 @@ func translateByGas(messages [][]string, depId string, language string, outputFi
 
     b, _ := json.Marshal(jsonData)
     resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(b))
-
-	// resp, err := http.Get(apiURL + "?" + params.Encode())
 	if err != nil {
-        errorLog("translation request error. (Gas)", err)
+        errorLog("translation request error. (Gas)")
 		return
 	}
 	defer resp.Body.Close()
 
-	// HTTP ステータスコードの確認
+	// check status
 	if resp.StatusCode != http.StatusOK {
         errorLog("translation request error. please check your Google App Script Deplopment ID.")
 		return
 	}
 
+    // check read body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-        errorLog("Failed to read response body. (Gas)", err)
+        errorLog("Failed to read response body. (Gas)")
 		return
 	}
 
+    // check parse
     var results []string
     if err := json.Unmarshal(body, &results); err != nil {
-        errorLog("failed to parse JSON response. (Gas)", err)
+        errorLog("failed to parse JSON response. (Gas)")
         return
     }
 
-    f, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-    if err != nil {
-        errorLog("Failed to open translated log file.", err)
-        return
-    }
-    defer f.Close()
-
-    for i, t := range results {
-        line := messages[i][0] + "\t" + messages[i][1] + "\t" + messages[i][2] + "\t" + t + "\n"
-
-        if _, err := f.WriteString(line); err != nil {
-            errorLog("Failed to write to translated log file.", err)
-            return
-        }
-    }
+    writeTranslatedLog(messages, results)
 }
 
 func checkAndTranslateFiles() {
@@ -497,17 +502,13 @@ func checkAndTranslateFiles() {
     }
     messages := readChatlogMessages(filenames)
 
-    // today Date
-    dateStr := time.Now().Format("20060102")
-	dateTranslatedChatlogFile := fmt.Sprintf("%s%s%s.txt", logFolder, translatedChatlogName, dateStr)
-
     if len(messages) > 0 {
 
         if transMode == deeplMode {
-            translateByDeeplApi(messages, apiKey, language, dateTranslatedChatlogFile)
+            translateByDeeplApi(messages, apiKey, language)
         }
         if transMode == googleMode {
-            translateByGas(messages, depId, language, dateTranslatedChatlogFile)
+            translateByGas(messages, depId, language)
         }
     }
 
