@@ -18,13 +18,7 @@ import (
     "github.com/getlantern/systray"
     "github.com/yuin/gopher-lua"
     "golang.org/x/sys/windows"
-    "syscall"
     "unsafe"
-)
-
-var (
-	kernel32           = syscall.NewLazyDLL("kernel32.dll")
-	procSetConsoleTitle = kernel32.NewProc("SetConsoleTitleW")
 )
 
 const (
@@ -258,6 +252,58 @@ func isSafeFileName(name string) bool {
     return true
 }
 
+func translateByDeeplApi(messages [][]string, apiKey string, language string, dateTranslatedChatlogFile string) {
+    data := url.Values{}
+    data.Set("auth_key", apiKey)
+    data.Set("target_lang", language)
+
+    var respStruct DeepLResponse
+    for _, message := range messages {
+        data.Add("text", message[2])
+    }
+
+    // GETリクエスト
+    resp, err := http.Post(endpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+    if err != nil {
+        errorLog("translation request error.", err)
+        return
+    }
+
+    if resp.StatusCode != 200 {
+        errorLog("translation request error. please check your DeepL API Key.")
+        return
+    }
+
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        errorLog("Failed to read response body.", err.Error())
+        return
+    }
+
+    err = json.Unmarshal(body, &respStruct)
+    if err != nil {
+        errorLog("failed to parse JSON response.", err)
+        return
+    }
+
+    f, err := os.OpenFile(dateTranslatedChatlogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+    if err != nil {
+        errorLog("Failed to open translated log file:", err)
+        return
+    }
+    defer f.Close()
+
+    for i, t := range respStruct.Translations {
+        line := messages[i][0] + "\t" + messages[i][1] + "\t" + messages[i][2] + "\t" + t.Text + "\n"
+
+        if _, err := f.WriteString(line); err != nil {
+            errorLog("Failed to write to translated log file:", err)
+            return
+        }
+    }
+    resp.Body.Close()
+}
+
 func checkAndTranslateFiles() {
     infoLog("translator start...")
 
@@ -349,55 +395,7 @@ func checkAndTranslateFiles() {
 	dateTranslatedChatlogFile := fmt.Sprintf("%s%s%s.txt", logFolder, translatedChatlogName, dateStr)
 
     if len(messages) > 0 {
-        data := url.Values{}
-        data.Set("auth_key", apiKey)
-        data.Set("target_lang", language)
-
-        var respStruct DeepLResponse
-        for _, message := range messages {
-            data.Add("text", message[2])
-        }
-
-        // GETリクエスト
-        resp, err := http.Post(endpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
-        if err != nil {
-            errorLog("translation request error.", err)
-            return
-        }
-
-        if resp.StatusCode != 200 {
-            errorLog("translation request error. please check your DeepL API Key.")
-            return
-        }
-
-        body, err := ioutil.ReadAll(resp.Body)
-        if err != nil {
-            errorLog("Failed to read response body.", err.Error())
-            return
-        }
-
-        err = json.Unmarshal(body, &respStruct)
-        if err != nil {
-            errorLog("failed to parse JSON response.", err)
-            return
-        }
-
-        f, err := os.OpenFile(dateTranslatedChatlogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-        if err != nil {
-            errorLog("Failed to open translated log file:", err)
-            return
-        }
-        defer f.Close()
-
-        for i, t := range respStruct.Translations {
-            line := messages[i][0] + "\t" + messages[i][1] + "\t" + messages[i][2] + "\t" + t.Text + "\n"
-
-            if _, err := f.WriteString(line); err != nil {
-                errorLog("Failed to write to translated log file:", err)
-                return
-            }
-        }
-        resp.Body.Close()
+       translateByDeeplApi(messages, apiKey, language, dateTranslatedChatlogFile)
     }
 
     // delete translated log files
