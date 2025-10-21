@@ -128,7 +128,10 @@ if optionsLoaded then
 
     -- translation setting
     options.language                  = NotNilOrDefault(options.language, 9)
+    options.translationMode               = NotNilOrDefault(options.translationMode, 1)
     options.deeplApiKey               = NotNilOrDefault(options.deeplApiKey, "")
+    options.googleAppScriptDeploymentId = NotNilOrDefault(options.googleAppScriptDeploymentId, "")
+
     options.chatDisplayMode           = NotNilOrDefault(options.chatDisplayMode, 1)
 
     options.clEnableWindow            = NotNilOrDefault(options.clEnableWindow, true)
@@ -167,7 +170,9 @@ else
         useCustomTheme = false,
         fontScale = 1.0,
         language = 9,
+        translationMode = 1,
         deeplApiKey = "",
+        googleAppScriptDeploymentId = "",
 
         chatDisplayMode = 1,
         clEnableWindow = true,
@@ -214,7 +219,9 @@ local function SaveOptions(options)
         io.write(string.format("    fontScale = %s,\n", tostring(options.fontScale)))
         io.write("\n")
         io.write(string.format("    language = %s,\n", tostring(options.language)))
+        io.write(string.format("    translationMode = %s,\n", tostring(options.translationMode)))
         io.write(string.format('    deeplApiKey = "%s",\n', tostring(options.deeplApiKey)))
+        io.write(string.format('    googleAppScriptDeploymentId = "%s",\n', tostring(options.googleAppScriptDeploymentId)))
         io.write("\n")
         io.write(string.format('    chatDisplayMode = "%s",\n', tostring(options.chatDisplayMode)))
         io.write(string.format("    clEnableWindow = %s,\n", tostring(options.clEnableWindow)))

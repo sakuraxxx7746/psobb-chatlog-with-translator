@@ -113,46 +113,27 @@ local function ConfigurationWindow(configuration)
         local success
         local languageList =
         {
-            "Arabic",
-            "Bulgarian",
-            "Czech",
-            "Danish",
-            "German",
-            "Greek",
-            "English (unspecified variant for backward compatibility; we recommend usingEN-GB or EN-US instead)",
-            "English (British)",
             "English (American)",
-            "Spanish",
-            "Spanish (Latin American)",
-            "Estonian",
-            "Finnish",
-            "French",
-            "Hebrew (text translation via next-gen models only)",
-            "Hungarian",
-            "Indonesian",
-            "Italian",
+            "English (British) - deepl only",
             "Japanese",
             "Korean",
-            "Lithuanian",
-            "Latvian",
-            "Norwegian Bokmål",
-            "Dutch",
-            "Polish",
-            "Portuguese (unspecified variant for backward compatibility; we recommend using PT-BR or PT-PT instead)",
-            "Portuguese (Brazilian)",
-            "Portuguese (all Portuguese variants excluding Brazilian Portuguese)",
-            "Romanian",
+            "Chinese (Simplified)",
+            "Chinese (Traditional)",
+            "French",
+            "German",
+            "Spanish",
+            "Portuguese (Brazil)",
             "Russian",
-            "Slovak",
-            "Slovenian",
-            "Swedish",
-            "Thai (text translation via next-gen models only)",
-            "Turkish",
-            "Ukrainian",
-            "Vietnamese (text translation via next-gen models only)",
-            "Chinese (unspecified variant for backward compatibility; we recommend using ZH-HANS or ZH-HANT instead)",
-            "Chinese (simplified)",
-            "Chinese (traditional)",
+            "Italian",
+            "Thai",
+            "Vietnamese",
+            "Indonesian",
+            "Arabic",
+        }
+        local translationModeList =
+        {
+            "DeepL API",
+            "Google App Script"
         }
         local chatDisplayModeList =
         {
@@ -180,19 +161,37 @@ local function ConfigurationWindow(configuration)
 
             imgui.Text("Please set your language.")
             imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
-            success, _configuration.language = imgui.Combo("language", _configuration.language, languageList, table.getn(languageList))
+            success, _configuration.language = imgui.Combo("Language", _configuration.language, languageList, table.getn(languageList))
             imgui.PopItemWidth()
             if success then
                 this.changed = true
             end
 
-            imgui.Text("Please set your DeepL API Key.")
-            imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
-            success, currLang = imgui.InputText("DeepL API Key", _configuration.deeplApiKey, 100)
+            imgui.PushItemWidth(150)
+            success, _configuration.translationMode = imgui.Combo("Select translator", _configuration.translationMode, translationModeList, table.getn(translationModeList))
+            imgui.PopItemWidth()
             if success then
-                _configuration.deeplApiKey = currLang
                 this.changed = true
             end
+
+            if _configuration.translationMode == 2 then
+                imgui.Text("Please set your Google App Script Deployment ID.")
+                imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
+                success, currLang = imgui.InputText("Deployment ID", _configuration.googleAppScriptDeploymentId, 100)
+                if success then
+                    _configuration.googleAppScriptDeploymentId = currLang
+                    this.changed = true
+                end
+            else
+                imgui.Text("Please set your DeepL API Key.")
+                imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
+                success, currLang = imgui.InputText("DeepL API Key", _configuration.deeplApiKey, 100)
+                if success then
+                    _configuration.deeplApiKey = currLang
+                    this.changed = true
+                end
+            end
+
 
             imgui.TreePop()
         end

@@ -3,8 +3,10 @@ package main
 // compile command go build -ldflags="-H=windowsgui" -o chatlogTranslator.exe
 
 import (
+    "bytes"
     "bufio"
     "fmt"
+    "io"
     "io/ioutil"
     "net/http"
     "net/url"
@@ -25,92 +27,89 @@ const (
     addonFolder = "./addons/ChatLogTranslator/"
     logFolder = addonFolder + "log/"
     reLogName = `^chat\d+\.txt$`
-    reApiKey = `deeplApiKey = (.+)$`
     translatedChatlogName = "translatedChat"
     infoLogFile = logFolder + "translation_info.txt"
     errorLogFile = logFolder + "translation_error.txt"
-    endpoint = "https://api-free.deepl.com/v2/translate"
+    deeplUrl = "https://api-free.deepl.com/v2/translate"
+    gasUrl = "https://script.google.com/macros/s/"
     iconFile = addonFolder + "redria.ico"
     luaOptions = addonFolder + "options.lua"
     gameWindowTitle = "Ephinea: Phantasy Star Online Blue Burst"
+    deeplMode = 1
+    googleMode = 2
 )
 
-var languages = []string{
-    "AR",
-    "BG",
-    "CS",
-    "DA",
-    "DE",
-    "EL",
-    "EN",
-    "EN-GB",
+var deeplLanguages = []string{
     "EN-US",
-    "ES",
-    "ES-419",
-    "ET",
-    "FI",
-    "FR",
-    "HE",
-    "HU",
-    "ID",
-    "IT",
+    "EN-GB",
     "JA",
     "KO",
-    "LT",
-    "LV",
-    "NB",
-    "NL",
-    "PL",
-    "PT",
-    "PT-BR",
-    "PT-PT",
-    "RO",
-    "RU",
-    "SK",
-    "SL",
-    "SV",
-    "TH",
-    "TR",
-    "UK",
-    "VI",
-    "ZH",
     "ZH-HANS",
     "ZH-HANT",
+    "FR",
+    "DE",
+    "ES",
+    "PT-BR",
+    "RU",
+    "IT",
+    "TH",
+    "VI",
+    "ID",
+    "AR",
+}
+
+var googleLanguages = []string{
+    "en",
+    "en",
+    "ja",
+    "ko",
+    "zh-CN",
+    "zh-TW",
+    "fr",
+    "de",
+    "es",
+    "pt-BR",
+    "ru",
+    "it",
+    "th",
+    "vi",
+    "id",
+    "ar",
 }
 
 var mutex windows.Handle
 
-type Translation struct {
+type TranslationResponse struct {
     Text string `json:"text"`
 }
 
 type DeepLResponse struct {
-    Translations []Translation `json:"translations"`
+    Translations []TranslationResponse `json:"translations"`
 }
 
-func write (path string, message string) {
-    os.WriteFile(path, []byte(message + "\n"), 0644)
-}
-
-// append log function
-// func write(path string, message string) {
-//     ft, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-//     if err != nil {
-//         fmt.Println("Failed to open logger file:", err)
-//     }
-
-//     _, err = ft.WriteString(message + "\n")
-//     if err != nil {
-//         fmt.Println("Failed to write to logger file:", err)
-//     }
+// func write (path string, message string) {
+//     os.WriteFile(path, []byte(message + "\n"), 0644)
 // }
 
-func infoLog(args ...interface{}) {
-    // timestamp := time.Now().Format("2006-01-02 15:04:05")
-    // msg := fmt.Sprint(args...)
-    // line := timestamp + "\t" + msg
+// append log function
+func write(path string, message string) {
+    ft, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+    if err != nil {
+        fmt.Println("Failed to open logger file:", err)
+    }
 
-    // write(infoLogFile, line)
+    _, err = ft.WriteString(message + "\n")
+    if err != nil {
+        fmt.Println("Failed to write to logger file:", err)
+    }
+}
+
+func infoLog(args ...interface{}) {
+    timestamp := time.Now().Format("2006-01-02 15:04:05")
+    msg := fmt.Sprint(args...)
+    line := timestamp + "\t" + msg
+
+    write(infoLogFile, line)
     // fmt.Println(line)
 }
 
@@ -252,107 +251,11 @@ func isSafeFileName(name string) bool {
     return true
 }
 
-func translateByDeeplApi(messages [][]string, apiKey string, language string, dateTranslatedChatlogFile string) {
-    data := url.Values{}
-    data.Set("auth_key", apiKey)
-    data.Set("target_lang", language)
-
-    var respStruct DeepLResponse
-    for _, message := range messages {
-        data.Add("text", message[2])
-    }
-
-    // GETリクエスト
-    resp, err := http.Post(endpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
-    if err != nil {
-        errorLog("translation request error.", err)
-        return
-    }
-
-    if resp.StatusCode != 200 {
-        errorLog("translation request error. please check your DeepL API Key.")
-        return
-    }
-
-    body, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        errorLog("Failed to read response body.", err.Error())
-        return
-    }
-
-    err = json.Unmarshal(body, &respStruct)
-    if err != nil {
-        errorLog("failed to parse JSON response.", err)
-        return
-    }
-
-    f, err := os.OpenFile(dateTranslatedChatlogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-    if err != nil {
-        errorLog("Failed to open translated log file:", err)
-        return
-    }
-    defer f.Close()
-
-    for i, t := range respStruct.Translations {
-        line := messages[i][0] + "\t" + messages[i][1] + "\t" + messages[i][2] + "\t" + t.Text + "\n"
-
-        if _, err := f.WriteString(line); err != nil {
-            errorLog("Failed to write to translated log file:", err)
-            return
-        }
-    }
-    resp.Body.Close()
-}
-
-func checkAndTranslateFiles() {
-    infoLog("translator start...")
-
-    // get apiKey
-    var apiKey string
-    var language string
-
-    L := lua.NewState()
-    defer L.Close()
-
-    if err := L.DoFile(luaOptions); err != nil {
-        errorLog("DeepL API key not set. Please set it in the configuration.")
-        return
-    }
-
-    tbl := L.Get(-1)
-    if tblTable, ok := tbl.(*lua.LTable); ok {
-        apiKeyVal := tblTable.RawGetString("deeplApiKey")
-        apiKeyStr, ok := apiKeyVal.(lua.LString)
-        if !ok {
-            errorLog("DeepL API key not set. Please set it in the configuration.")
-            return
-        }
-        if string(apiKeyStr) == "" {
-            errorLog("DeepL API Key not set. Please set it.")
-            return
-        }
-        apiKey = string(apiKeyStr)
-
-        languageVal  := tblTable.RawGetString("language")
-        num, ok := languageVal.(lua.LNumber)
-        if !ok {
-            errorLog("Language value is not a number.")
-            return
-        }
-
-        index := int(num) -1
-        if index >= 0 && index < len(languages) {
-            language = languages[index]
-        } else {
-            language = "EN"
-        }
-    }
-
-    // log file check
+func getChatlogFilenames() []string {
     files, err := os.ReadDir(logFolder)
     if err != nil {
         errorLog("could not find log folder.")
-        return
+        return nil
     }
 
     fileReg := regexp.MustCompile(reLogName)
@@ -369,6 +272,10 @@ func checkAndTranslateFiles() {
 
     sort.Strings(filenames)
 
+    return filenames
+}
+
+func readChatlogMessages(filenames []string) [][]string {
     var messages [][]string
     for _, filename := range filenames {
         logFile, err := os.Open(logFolder + filename)
@@ -379,23 +286,229 @@ func checkAndTranslateFiles() {
 
         scanner := bufio.NewScanner(logFile)
         for scanner.Scan() {
-            
+
             line := scanner.Text()
             parts := strings.Split(line, "\t")
             if len(parts) >= 3 {
                 messages = append(messages, parts)
             }
         }
-        
+
         logFile.Close()
     }
+
+    return messages
+}
+
+func translateByDeeplApi(messages [][]string, apiKey string, language string, outputFile string) {
+    data := url.Values{}
+    data.Set("auth_key", apiKey)
+    data.Set("target_lang", language)
+
+    var respStruct DeepLResponse
+    for _, message := range messages {
+        data.Add("text", message[2])
+    }
+
+    // GETリクエスト
+    resp, err := http.Post(deeplUrl, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+    if err != nil {
+        errorLog("translation request error. (Deepl)", err)
+        return
+    }
+
+    if resp.StatusCode != http.StatusOK {
+        errorLog("translation request error. please check your DeepL API Key.", err)
+        return
+    }
+
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        errorLog("Failed to read response body. (Deepl)", err)
+        return
+    }
+
+    err = json.Unmarshal(body, &respStruct)
+    if err != nil {
+        errorLog("failed to parse JSON response. (Deepl)", err)
+        return
+    }
+
+    f, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+    if err != nil {
+        errorLog("Failed to open translated log file.", err)
+        return
+    }
+    defer f.Close()
+
+    for i, t := range respStruct.Translations {
+        line := messages[i][0] + "\t" + messages[i][1] + "\t" + messages[i][2] + "\t" + t.Text + "\n"
+
+        if _, err := f.WriteString(line); err != nil {
+            errorLog("Failed to write to translated log file.", err)
+            return
+        }
+    }
+    resp.Body.Close()
+}
+
+func translateByGas(messages [][]string, depId string, language string, outputFile string) {
+    apiURL := gasUrl + depId + "/exec"
+
+	texts := []string{}
+    for _, message := range messages {
+        texts = append(texts, message[2])
+    }
+
+    jsonData := map[string]interface{}{
+        "texts":  texts,
+        "target": language,
+    }
+
+    b, _ := json.Marshal(jsonData)
+    resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(b))
+
+	// resp, err := http.Get(apiURL + "?" + params.Encode())
+	if err != nil {
+        errorLog("translation request error. (Gas)", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// HTTP ステータスコードの確認
+	if resp.StatusCode != http.StatusOK {
+        errorLog("translation request error. please check your Google App Script Deplopment ID.")
+		return
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+        errorLog("Failed to read response body. (Gas)", err)
+		return
+	}
+
+    var results []string
+    if err := json.Unmarshal(body, &results); err != nil {
+        errorLog("failed to parse JSON response. (Gas)", err)
+        return
+    }
+
+    f, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+    if err != nil {
+        errorLog("Failed to open translated log file.", err)
+        return
+    }
+    defer f.Close()
+
+    for i, t := range results {
+        line := messages[i][0] + "\t" + messages[i][1] + "\t" + messages[i][2] + "\t" + t + "\n"
+
+        if _, err := f.WriteString(line); err != nil {
+            errorLog("Failed to write to translated log file.", err)
+            return
+        }
+    }
+}
+
+func checkAndTranslateFiles() {
+    infoLog("translator start...")
+
+    // get apiKey
+    var apiKey string
+    var depId string
+    var language string
+    var transMode int
+
+    L := lua.NewState()
+    defer L.Close()
+
+    if err := L.DoFile(luaOptions); err != nil {
+        errorLog("DeepL API key not set. Please set it in the configuration.")
+        return
+    }
+
+    tbl := L.Get(-1)
+    if tblTable, ok := tbl.(*lua.LTable); ok {
+
+        langVal  := tblTable.RawGetString("language")
+        langFloat, ok := langVal.(lua.LNumber)
+        if !ok {
+            errorLog("Language value is not a number.")
+            return
+        }
+
+        langIndex := int(langFloat) -1
+
+        transModeVal  := tblTable.RawGetString("translationMode")
+        tFloat, ok := transModeVal.(lua.LNumber)
+        if !ok {
+            errorLog("translation mode value is not a number.")
+            return
+        }
+    
+        transMode = int(tFloat)
+
+        if (transMode == deeplMode) {
+            apiKeyVal := tblTable.RawGetString("deeplApiKey")
+            apiKeyStr, ok := apiKeyVal.(lua.LString)
+            if !ok {
+                errorLog("DeepL API key not set. Please set it in the configuration.")
+                return
+            }
+            if string(apiKeyStr) == "" {
+                errorLog("DeepL API Key not set. Please set it.")
+                return
+            }
+            apiKey = string(apiKeyStr)
+            
+            if langIndex >= 0 && langIndex < len(deeplLanguages) {
+                language = deeplLanguages[langIndex]
+            } else {
+                language = "EN-US"
+            }
+        }
+
+        if (transMode == googleMode) {
+            depIdyVal := tblTable.RawGetString("googleAppScriptDeploymentId")
+            depIdyStr, ok := depIdyVal.(lua.LString)
+            if !ok {
+                errorLog("Google App Script Deployment ID not set. Please set it in the configuration.")
+                return
+            }
+            if string(depIdyStr) == "" {
+                errorLog("Google App Script Deployment ID not set. Please set it.")
+                return
+            }
+            depId = string(depIdyStr)
+
+            if langIndex >= 0 && langIndex < len(googleLanguages) {
+                language = googleLanguages[langIndex]
+            } else {
+                language = "en"
+            }
+        }
+
+    }
+
+    // log file check
+    filenames := getChatlogFilenames()
+    if filenames == nil {
+        return
+    }
+    messages := readChatlogMessages(filenames)
 
     // today Date
     dateStr := time.Now().Format("20060102")
 	dateTranslatedChatlogFile := fmt.Sprintf("%s%s%s.txt", logFolder, translatedChatlogName, dateStr)
 
     if len(messages) > 0 {
-       translateByDeeplApi(messages, apiKey, language, dateTranslatedChatlogFile)
+
+        if transMode == deeplMode {
+            translateByDeeplApi(messages, apiKey, language, dateTranslatedChatlogFile)
+        }
+        if transMode == googleMode {
+            translateByGas(messages, depId, language, dateTranslatedChatlogFile)
+        }
     }
 
     // delete translated log files
