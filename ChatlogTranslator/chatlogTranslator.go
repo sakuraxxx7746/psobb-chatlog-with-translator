@@ -368,6 +368,7 @@ func translateByDeeplApi(messages [][]string, apiKey string, language string) {
         _results[i] = t.Text
     }
 
+    // write log
     writeTranslatedLog(messages, _results)
 }
 
@@ -412,6 +413,7 @@ func translateByGas(messages [][]string, depId string, language string) {
         return
     }
 
+    // write log
     writeTranslatedLog(messages, results)
 }
 

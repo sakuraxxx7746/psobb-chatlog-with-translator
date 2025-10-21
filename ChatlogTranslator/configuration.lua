@@ -159,45 +159,40 @@ local function ConfigurationWindow(configuration)
                 this.changed = true
             end
 
-            imgui.Text("Please set your language.")
-            imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
-            success, _configuration.language = imgui.Combo("Language", _configuration.language, languageList, table.getn(languageList))
-            imgui.PopItemWidth()
-            if success then
-                this.changed = true
-            end
-
+            imgui.Spacing()
+            imgui.Text("Translation Method")
             imgui.PushItemWidth(150)
-            success, _configuration.translationMode = imgui.Combo("Select translator", _configuration.translationMode, translationModeList, table.getn(translationModeList))
+            success, _configuration.translationMode = imgui.Combo("Select Translation Method", _configuration.translationMode, translationModeList, table.getn(translationModeList))
             imgui.PopItemWidth()
             if success then
                 this.changed = true
             end
 
             if _configuration.translationMode == 2 then
-                imgui.Text("Please set your Google App Script Deployment ID.")
                 imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
-                success, currLang = imgui.InputText("Deployment ID", _configuration.googleAppScriptDeploymentId, 100)
+                success, _configuration.googleAppScriptDeploymentId = imgui.InputText("Deployment ID", _configuration.googleAppScriptDeploymentId, 100)
                 if success then
-                    _configuration.googleAppScriptDeploymentId = currLang
                     this.changed = true
                 end
             else
-                imgui.Text("Please set your DeepL API Key.")
                 imgui.PushItemWidth(imgui.GetWindowWidth() * 0.75)
-                success, currLang = imgui.InputText("DeepL API Key", _configuration.deeplApiKey, 100)
+                success, _configuration.deeplApiKey = imgui.InputText("DeepL API Key", _configuration.deeplApiKey, 100)
                 if success then
-                    _configuration.deeplApiKey = currLang
                     this.changed = true
                 end
             end
 
-
+            imgui.Spacing()
+            imgui.PushItemWidth(200)
+            success, _configuration.language = imgui.Combo("Select Your Language", _configuration.language, languageList, table.getn(languageList))
+            imgui.PopItemWidth()
+            if success then
+                this.changed = true
+            end
             imgui.TreePop()
         end
 
         if imgui.TreeNodeEx("TranslatorChatLog", "DefaultOpen") then
-
             imgui.PushItemWidth(300)
             success, _configuration.chatDisplayMode = imgui.Combo("Select the chat to display.", _configuration.chatDisplayMode, chatDisplayModeList, table.getn(chatDisplayModeList))
             imgui.PopItemWidth()
@@ -205,6 +200,7 @@ local function ConfigurationWindow(configuration)
                 this.changed = true
             end
 
+            imgui.Spacing()
             if imgui.Checkbox("Hide when menus are open", _configuration.clHideWhenMenu) then
                 _configuration.clHideWhenMenu = not _configuration.clHideWhenMenu
                 this.changed = true

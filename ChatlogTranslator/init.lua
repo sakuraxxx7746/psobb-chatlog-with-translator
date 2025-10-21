@@ -127,7 +127,7 @@ if optionsLoaded then
     options.fontScale                 = NotNilOrDefault(options.fontScale, 1.0)
 
     -- translation setting
-    options.language                  = NotNilOrDefault(options.language, 9)
+    options.language                  = NotNilOrDefault(options.language, 1)
     options.translationMode               = NotNilOrDefault(options.translationMode, 1)
     options.deeplApiKey               = NotNilOrDefault(options.deeplApiKey, "")
     options.googleAppScriptDeploymentId = NotNilOrDefault(options.googleAppScriptDeploymentId, "")
@@ -169,7 +169,7 @@ else
         enable = true,
         useCustomTheme = false,
         fontScale = 1.0,
-        language = 9,
+        language = 1,
         translationMode = 1,
         deeplApiKey = "",
         googleAppScriptDeploymentId = "",
