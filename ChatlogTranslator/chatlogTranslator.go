@@ -454,7 +454,7 @@ func loadLuaConfig() (apiKey, depId, language string, transMode int, err error) 
     defer L.Close()
 
     if err := L.DoFile(luaOptions); err != nil {
-        return "", "", "", 0, fmt.Errorf("Please set up the translator setting.")
+        return "", "", "", 0, fmt.Errorf("Please configure the translator settings.")
     }
 
     tbl := L.Get(-1)
