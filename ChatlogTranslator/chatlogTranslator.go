@@ -454,7 +454,7 @@ func loadLuaConfig() (apiKey, depId, language string, transMode int, err error) 
     defer L.Close()
 
     if err := L.DoFile(luaOptions); err != nil {
-        return "", "", "", 0, fmt.Errorf("Failed to load Lua file.")
+        return "", "", "", 0, fmt.Errorf("Please set up the the translator setting.")
     }
 
     tbl := L.Get(-1)
@@ -492,7 +492,7 @@ func loadLuaConfig() (apiKey, depId, language string, transMode int, err error) 
         }
 
     default:
-        return "", "", "", transMode, fmt.Errorf("Unknown translation mode: %d", transMode)
+        return "", "", "", transMode, fmt.Errorf("translation mode not set.")
     }
 
     infoLog("lua options:", apiKey, ",", depId, ",", language, ",", transMode)
