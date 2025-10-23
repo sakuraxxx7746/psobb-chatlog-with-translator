@@ -24,8 +24,8 @@ import (
 )
 
 const (
-    enableAppendLog = false
-    enableInfoLog = false
+    enableAppendLog = true
+    enableInfoLog = true
     addonFolder = "./addons/ChatLogTranslator/"
     logFolder = addonFolder + "log/"
     reLogName = `^chat\d+\.txt$`
@@ -512,26 +512,26 @@ func checkAndTranslateFiles() {
         if transMode == googleMode {
             translateByGas(messages, depId, language)
         }
-    }
-
-    // delete translated log files
-    for _, filename := range filenames {
-        path := logFolder + filename
-        if !isSafeFileName(path) {
-            errorLog("Failed to delete translated log file. file name is not safety.")
-            break 
+        
+        // delete translated log files
+        for _, filename := range filenames {
+            path := logFolder + filename
+            if !isSafeFileName(path) {
+                errorLog("Failed to delete translated log file. file name is not safety.")
+                break
+            }
+            err := os.Remove(path)
+            if err != nil {
+                errorLog("Failed to delete translated log file.")
+            }
         }
-        err := os.Remove(path)
-        if err != nil {
-            errorLog("Failed to delete translated log file.")
-        }
-    }
 
-    // delete error file
-    if _, err := os.Stat(errorLogFile); err == nil {
-        err = os.Remove(errorLogFile)
-        if err != nil {
-            errorLog("Failed to delete translated error log file:", err)
+        // delete error file
+        if _, err := os.Stat(errorLogFile); err == nil {
+            err = os.Remove(errorLogFile)
+            if err != nil {
+                errorLog("Failed to delete translated error log file:")
+            }
         }
     }
 }

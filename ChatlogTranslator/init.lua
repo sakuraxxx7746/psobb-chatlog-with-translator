@@ -331,7 +331,7 @@ local function readErrorLog()
         for substr in string.gmatch(line, "[^\t]+") do
             table.insert(msg, substr)
         end
-        print(msg[2])
+
         -- add output_messages
         table.insert(trancelation_error_messages, {
             date = msg[1] or "",
