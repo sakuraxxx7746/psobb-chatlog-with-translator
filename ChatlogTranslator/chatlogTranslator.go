@@ -27,7 +27,7 @@ import (
 
 const (
     enableAppendLog = false
-    enableInfoLog   = true
+    enableInfoLog   = false
     addonFolder = "./addons/ChatLogTranslator/"
     logFolder = addonFolder + "log/"
     reLogName = `^chat\d+\.txt$`
