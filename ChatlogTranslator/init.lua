@@ -259,11 +259,13 @@ local function SaveOptions(options)
 end
 
 local function getChatLogFileName()
-    local today_date_str = os.date("%Y%m%d")
+    -- translatedChat20251023053259.txt
+    local today_date_str = os.date('%Y%m%d%H%M%S')
     return LOG_PATH .. "chat" .. today_date_str .. ".txt"
 end
 
 local function getTransLatedChatLogFileName()
+    -- translatedChat20251023.txt
     local today_date_str = os.date("%Y%m%d")
     return LOG_PATH .. "translatedChat" .. today_date_str .. ".txt"
 end
@@ -275,15 +277,17 @@ local function logFomatter(msg)
 end
 
 local function logging(msg, path)
+    if not options.enable then
+        return
+    end
     if path == nil then
         path = DEBUG_LOG
     end
 
-    local timestamp = os.date('%Y%m%d%H%M%S')  -- 現在時刻のUNIXタイム
-    local filename = "chat" .. timestamp .. ".txt"
+    local filename = getChatLogFileName()
 
     -- Create file
-    local file = io.open(LOG_PATH .. filename, "a")
+    local file = io.open(filename, "a")
 
     io.output(file)
     io.write(msg.."\n")
@@ -308,13 +312,11 @@ local QCHAT_REPLACE = "(> )\t[" .. LOCALES .. "]"
 local MAX_GAME_LOG = 29 -- max amount of messages the game stores
 local MAX_MSG_SIZE = 100 -- not correct but close enough, character name length seems to affect it
 local output_messages = {}
-local trancelated_messages = {}
-local trancelation_error_messages = {}
 
 local function readErrorLog()
-    trancelation_error_messages = {}
+    local messages = {}
     local file = io.open(TRANCELATION_ERROR_LOG, "r")
-    if not file then return end
+    if not file then return messages end
 
     local buffer = {}
     for line in file:lines() do
@@ -323,7 +325,7 @@ local function readErrorLog()
     file:close()
 
     if #buffer == 0 then
-        return nil
+        return messages
     end
 
     for _, line in ipairs(buffer) do
@@ -333,44 +335,61 @@ local function readErrorLog()
         end
 
         -- add output_messages
-        table.insert(trancelation_error_messages, {
+        table.insert(messages, {
             date = msg[1] or "",
             name =  "",
             text = msg[2] or "",
             trancelated = "",
         })
     end
+    return messages
+end
 
+local translated_logs = {}
+local function addLogFile(filename)
+    for _, f in ipairs(translated_logs) do
+        if f == filename then
+            return
+        end
+    end
+    table.insert(translated_logs, filename)
 end
 
 local function readLogFile()
-    trancelated_messages = {}
-    local file = io.open(getTransLatedChatLogFileName(), "r")
-    if not file then return end
+    addLogFile(getTransLatedChatLogFileName())
+    table.sort(translated_logs)
 
-    local buffer = {}
-    for line in file:lines() do
-        table.insert(buffer, line)
-        -- When the size exceeds MAX_LOG_SIZE, delete the oldest.
-        if #buffer > MAX_MSG_SIZE then
-            table.remove(buffer, 1)
+    local messages = {}
+    for _, f in pairs(translated_logs) do
+        local file = io.open(f, "r")
+        if file then
+            local buffer = {}
+            for line in file:lines() do
+                table.insert(buffer, line)
+                -- When the size exceeds MAX_LOG_SIZE, delete the oldest.
+                if #buffer > MAX_MSG_SIZE then
+                    table.remove(buffer, 1)
+                end
+            end
+            file:close()
+
+            for _, line in ipairs(buffer) do
+                local msg = {}
+                for substr in string.gmatch(line, "[^\t]+") do
+                    table.insert(msg, substr)
+                end
+                -- add output_messages
+                table.insert(messages, {
+                    date = msg[1] or "",
+                    name = msg[2] or "",
+                    text = msg[3] or "",
+                    trancelated = msg[4] or ""
+                })
+            end
         end
     end
-    file:close()
 
-    for _, line in ipairs(buffer) do
-        local msg = {}
-        for substr in string.gmatch(line, "[^\t]+") do
-            table.insert(msg, substr)
-        end
-        -- add output_messages
-        table.insert(trancelated_messages, {
-            date = msg[1] or "",
-            name = msg[2] or "",
-            text = msg[3] or "",
-            trancelated = msg[4] or ""
-        })
-    end
+    return messages
 end
 
 local function get_chat_log()
@@ -474,6 +493,9 @@ local function TextCustomColored(r, g, b, a, text)
 end
 
 local function drawing_messages(messages, isError)
+    if messages == nil or #messages == 0 then
+        return
+    end
     for i, msg in ipairs(messages) do
         local formattedText = msg.text
         local formattedTrancelatedText = msg.trancelated
@@ -693,18 +715,16 @@ local function DoChat()
             end
         end
 
-
         counter = 0
     end
 
     -- draw messages
-    readErrorLog()
+    local trancelation_error_messages = readErrorLog()
     if #trancelation_error_messages > 0 then
-        trancelated_messages = trancelation_error_messages
         drawing_messages(trancelation_error_messages, true)
     else
-        readLogFile()
-        drawing_messages(trancelated_messages)
+        local translated_messages = readLogFile()
+        drawing_messages(translated_messages)
     end
 end
 
