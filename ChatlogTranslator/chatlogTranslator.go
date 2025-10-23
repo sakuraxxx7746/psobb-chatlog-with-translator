@@ -415,13 +415,6 @@ func translateByGas(messages [][]string, depId, language string) bool {
 func checkAndTranslateFiles() {
     infoLog("Translator loop triggered.")
 
-    // get apiKey
-    apiKey, depId, language, transMode, err := loadLuaConfig()
-    if err != nil {
-        errorLog(err)
-        return
-    }
-
     filenames := getChatlogFilenames()
     if len(filenames) == 0 {
         return
@@ -433,6 +426,13 @@ func checkAndTranslateFiles() {
     }
 
     infoLog("chatlog messages:", messages)
+
+    // get apiKey
+    apiKey, depId, language, transMode, err := loadLuaConfig()
+    if err != nil {
+        errorLog(err)
+        return
+    }
 
     var success bool
     switch transMode {
