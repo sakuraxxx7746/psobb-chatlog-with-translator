@@ -10,9 +10,15 @@ Ephinea PSOBBのチャットログアドオンに翻訳機能を追加しまし�
 常駐外部アプリで翻訳したチャットログをアドオンで読み取り、ゲーム内でUIに表示します。<br>
 logフォルダは削除しないでください。削除した場合、logフォルダを作成するか、新しくアドオンをダウンロードしてください。<br>
 
+<br>
+<img src="https://github.com/user-attachments/assets/f7e46550-e84d-4600-8e9c-ad9e53f690b2" width="100%">
+<img src="https://github.com/user-attachments/assets/36f9acb8-4d1a-4ba2-acd0-60aaeae37d39" width="50%">
+<br>
+<br>
 ▪️Forum<br>
 https://www.pioneer2.net/community/threads/chatlog-addon-with-translation.31888/
-
+<br>
+<br>
 ▪️How to create a Google App Script<br>
 https://youtu.be/qSxsuHmwRvc
 ```
@@ -25,3 +31,4 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(results));
 }
 ```
+
