@@ -19,8 +19,12 @@ logフォルダは削除しないでください。削除した場合、logフ�
 https://www.pioneer2.net/community/threads/chatlog-addon-with-translation.31888/
 <br>
 <br>
-▪️How to create a Google App Script<br>
+▪️How to create a Google App Script(YouTube).
+<br>
 https://youtu.be/qSxsuHmwRvc
+<br>
+<img src="https://github.com/user-attachments/assets/10137c2c-6972-47ac-a13c-d253b47f9a08" width="50%">
+
 ```
 function doPost(e) {
   const data = JSON.parse(e.postData.contents);
@@ -31,4 +35,5 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(results));
 }
 ```
+
 
